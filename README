@@ -1,0 +1,66 @@
+MALLOC README:
+
+Maintaining compaction:
+
+To maintain compaction, coelesce blocks after freeing and extending. These are the two times free blocks get created and must be checked against their neighbors.
+This ensures that anytime a free block is created or encountered, it is coelesced with the blocks next to it. In this implementation, the heap cannot shrink
+so it is only expanded when a fit cannot be found amongst the free blocks currently in the heap.
+
+Extend heap only extends by the amount necessary to be a valid size and be able to contain the newly requested memory. In this way, it isn't extended by too much, potentially
+fragmenting the heap with small amounts of free memory from extend calls. Chose 160 as MINBLOCKSIZE to ensure that there aren't as many small fragmented free blocks
+created when mallocing and reallocing. The result produces some allocated memory that is slightly large for what it needs, but it prevents overall expansion of the heap by reducing the number of small non-adjacent free blocks.
+
+ 
+
+Heap checker checks:
+
+consistency between header size/alloc and footer size/alloc
+
+correct sizes (by making sure block_prev of the next block does return the same block)
+
+Makes sure each block is in bounds of heap
+
+Makes sure every block in free_list is indeed freed
+
+Makes sure that the pointers of free blocks do point to other free blocks
+
+Makes sure that free blocks are coalesced
+
+
+Loops through heap backwards to ensure end tags are set correctly
+
+
+
+realloc Strategy:
+
+First handles edges cases where ptr is NULL or size == 0, returning malloc(size) and free(ptr) respectivley.
+Then aligns size passed in to ensure it is correct format for a block
+Gets block pointer from payload passed in for mminline manipulations
+Calculates available and original size whicha re initially the same
+If original size is greater than requested size, return a pointer to that place in memory because it's already big enough
+        considered implementing splitting here when the remaining size could fill a block, 
+        but figured it would cause more fragmentation and operations for the program to perform.
+Adjusts availab size to include next block if it is free    
+    chose not to consider previous block because of performance concerns (it didn't do as well)
+If the requested size is bigger than available size, malloc a new space for the data, then use memmove to transfer the original data to the new memory before freeing the original block
+If the requested size is between the original size and available size, pull the next block from the free list and adjust the size of original block ptr to include both
+        Here again chose not to split for performance reasons - the tests fared much better by not attempting to split. With a larger MINBLOCKSIZE, this becomes less and less likely.
+
+
+optimizations:
+
+Adjusted the standard MINBLOCKSIZE to be 160, which acheived the best balance between performance in the binary traces
+(operation heavy that do better with a small MINBLOCKSIZE)  and the realloc traces which do better with a large MINBLOCKSIZE.
+
+Chose not to implement splitting for the case in realloc where there is enough room for another block - this also coincided with the decision
+to increase MINBLOCKSIZE because it improved the performance of realloc which otherwise was very slow, or encountered free_list corruption when
+attempting to split blocks. 
+
+
+bugs:
+
+No known bugs
+
+
+thanks for grading my malloc :) this was a very challenging and fun one! 
+
